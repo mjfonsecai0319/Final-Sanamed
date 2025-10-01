@@ -1,0 +1,6 @@
+Tipo: PostgreSQL
+Host: dpg-d3ep0ql6ubrc739dqg9g-a.virginia-postgres.render.com
+Puerto: 5432
+Database: postsanamed  
+Usuario: usuario
+Contraseña: fIu8PbJJDb6VgSraMXDX4jj5EFzgFdfu
