@@ -7,7 +7,7 @@ from flask_migrate import Migrate
 from datetime import datetime, date, timedelta, time
 from ..extensions import db  # Asegúrate de que extensions.py contiene "db = SQLAlchemy()"
 from .utils import juegos, obtener_conteo_emociones_por_fecha, obtener_emociones_por_fecha, obtener_profesionales_disponibles, obtener_especialidad_profesional, obtener_nombre_profesional
-from ..models import Emocion, Consulta, FamiliaGratitud
+from ..models import Emocion, Consulta, FamiliaGratitud, Suscripcion
 from ..auth.utils import login_required
 import os
 import requests
@@ -43,6 +43,40 @@ def sobre_nosotros():
 def preguntas_frecuentes():
     """Página de preguntas frecuentes."""
     return render_template('user/preguntas_frecuentes.html')
+
+@user_bp.route('/upgrade')
+@login_required
+def upgrade():
+    """Página informativa para subir a Premium (versión demo)."""
+    es_premium = False
+    if 'id_usuario' in session:
+        es_premium = Suscripcion.usuario_es_premium(session['id_usuario'])
+    stripe_activo = bool(os.getenv('STRIPE_SECRET_KEY')) and 'placeholder' not in os.getenv('STRIPE_SECRET_KEY')
+    return render_template('user/upgrade.html', es_premium=es_premium, stripe_activo=stripe_activo)
+
+@user_bp.route('/activar_premium', methods=['POST'])
+@login_required
+def activar_premium():
+    """Activa premium de forma simulada (sin pasarela real todavía)."""
+    if 'id_usuario' not in session:
+        flash('No autenticado','error')
+        return redirect(url_for('auth.login'))
+    from datetime import datetime, timedelta
+    # Si ya es premium, no duplicar
+    if Suscripcion.usuario_es_premium(session['id_usuario']):
+        flash('Ya eres usuario Premium','info')
+        return redirect(url_for('user.upgrade'))
+    sub = Suscripcion(
+        id_usuario=session['id_usuario'],
+        tipo_plan='premium',
+        fecha_inicio=datetime.utcnow(),
+        fecha_fin=datetime.utcnow() + timedelta(days=30),
+        activa=True
+    )
+    db.session.add(sub)
+    db.session.commit()
+    flash('Se activó Premium por 30 días (demo).','success')
+    return redirect(url_for('user.upgrade'))
 
 
 @user_bp.route('/registro_emocion', methods=['POST'])

@@ -74,3 +74,47 @@ class FamiliaGratitud(db.Model):
     __table_args__ = (
         db.Index('idx_familia_gratitud_usuario', 'id_usuario'),
     )
+
+# ---------------- Nuevos modelos para funcionalidad Chatbot Premium ----------------
+
+class Suscripcion(db.Model):
+    __tablename__ = 'suscripciones'
+    id_suscripcion = db.Column(db.Integer, primary_key=True)
+    id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'), nullable=False, index=True)
+    tipo_plan = db.Column(db.String(20), nullable=False, default='gratuito')  # gratuito | premium
+    fecha_inicio = db.Column(db.DateTime, default=datetime.utcnow)
+    fecha_fin = db.Column(db.DateTime, nullable=True)
+    activa = db.Column(db.Boolean, default=True)
+    stripe_customer_id = db.Column(db.String(100), nullable=True)
+    stripe_subscription_id = db.Column(db.String(100), nullable=True, unique=True)
+
+    __table_args__ = (
+        db.Index('idx_suscripcion_usuario_activa', 'id_usuario', 'activa'),
+    )
+
+    @staticmethod
+    def usuario_es_premium(id_usuario: int) -> bool:
+        from datetime import datetime as _dt
+        ahora = _dt.utcnow()
+        sus = Suscripcion.query.filter(
+            Suscripcion.id_usuario == id_usuario,
+            Suscripcion.activa.is_(True),
+            Suscripcion.tipo_plan == 'premium',
+            db.or_(Suscripcion.fecha_fin.is_(None), Suscripcion.fecha_fin > ahora)
+        ).first()
+        return sus is not None
+
+
+class ChatbotMensaje(db.Model):
+    __tablename__ = 'chatbot_mensajes'
+    id_mensaje = db.Column(db.Integer, primary_key=True)
+    id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'), nullable=False, index=True)
+    mensaje_usuario = db.Column(db.Text, nullable=False)
+    respuesta_bot = db.Column(db.Text, nullable=False)
+    fecha = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    es_premium = db.Column(db.Boolean, default=False)
+
+    __table_args__ = (
+        db.Index('idx_chatbot_usuario_fecha', 'id_usuario', 'fecha'),
+    )
+

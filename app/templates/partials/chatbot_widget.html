@@ -1,0 +1,85 @@
+<style>
+/* Botón flotante con imagen de robot */
+#chatbot-toggle { position: fixed; bottom: 20px; right: 20px; background:#f8f8f8; border:2px solid #4a6fa5; border-radius:50%; width:70px; height:70px; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,.20); z-index:9999; display:flex; align-items:center; justify-content:center; transition: transform .18s, box-shadow .18s; }
+#chatbot-toggle:hover { transform: scale(1.05); box-shadow:0 6px 16px rgba(0,0,0,.3); }
+#chatbot-toggle img { width:60%; height:60%; object-fit:contain; }
+#chatbot-panel { position: fixed; bottom:90px; right:20px; width:350px; max-height:540px; background:#ffffff; border:2px solid #4a6fa5; border-radius:14px; display:none; flex-direction:column; box-shadow:0 6px 18px rgba(0,0,0,.22); z-index:9999; font-family:Arial, sans-serif; overflow:hidden; }
+#chatbot-header { background:#4a6fa5; color:#fff; padding:11px 15px; display:flex; justify-content:space-between; align-items:center; font-weight:600; }
+#chatbot-messages { padding:12px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:8px; background:#f8f8f8; }
+.chat-msg { padding:8px 10px; border-radius:10px; max-width:80%; font-size:14px; line-height:1.3; }
+.chat-user { align-self:flex-end; background:#d1ecf1; border:1px solid #b7d9e0; }
+.chat-bot { align-self:flex-start; background:#e2e7eb; border:1px solid #c7d1d9; }
+.chat-msg { box-shadow:0 1px 3px rgba(0,0,0,.10); }
+#chatbot-input-area { display:flex; gap:8px; padding:12px; border-top:1px solid #d0d7dc; background:#ffffff; }
+#chatbot-input-area input { flex:1; padding:9px 11px; border:1px solid #b5c2cf; border-radius:6px; font-size:14px; outline:none; transition:border-color .18s, box-shadow .18s; background:#f8f8f8; }
+#chatbot-input-area input:focus { border-color:#4a6fa5; box-shadow:0 0 0 2px rgba(74,111,165,.25); }
+#chatbot-input-area button { background:#4a6fa5; color:#fff; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; font-weight:600; letter-spacing:.5px; display:flex; align-items:center; gap:4px; box-shadow:0 3px 8px rgba(0,0,0,.2); transition:background .2s, transform .15s; }
+#chatbot-input-area button:hover { background:#3d5d89; }
+#chatbot-input-area button:active { transform:scale(.95); }
+#chatbot-limit { font-size:11px; color:#2c3e50; padding:6px 11px; background:#f0f0f0; border-top:1px solid #e0e0e0; font-weight:500; }
+#chatbot-upgrade { padding:10px 12px; background:#ffe8cc; font-size:12px; text-align:center; border-top:1px solid #f2d2a3; }
+#chatbot-upgrade a { color:#b85c00; font-weight:bold; text-decoration:none; }
+</style>
+
+<button id="chatbot-toggle" title="Asistente SANAMED">
+  <img src="{{ url_for('static', filename='user/bot.png') }}" alt="Asistente Virtual">
+</button>
+<div id="chatbot-panel" aria-live="polite">
+  <div id="chatbot-header">
+  <span>Asistente SANAMED</span>
+    <button id="chatbot-close" style="background:transparent;color:#fff;border:none;font-size:18px;cursor:pointer">×</button>
+  </div>
+  <div id="chatbot-messages">
+    <div class="chat-msg chat-bot">Hola, soy tu asistente emocional. ¿Cómo te sientes hoy?</div>
+  </div>
+  <div id="chatbot-limit"></div>
+  <div id="chatbot-upgrade" style="display:none;">Has alcanzado tu límite diario. <a href="/user/upgrade">Hazte Premium</a></div>
+  <div id="chatbot-input-area">
+    <input id="chatbot-input" type="text" placeholder="Escribe un mensaje..." maxlength="500" />
+  <button id="chatbot-send" aria-label="Enviar">Enviar ▷</button>
+  </div>
+</div>
+<script>
+(function(){
+  const toggle = document.getElementById('chatbot-toggle');
+  const panel = document.getElementById('chatbot-panel');
+  const closeBtn = document.getElementById('chatbot-close');
+  const sendBtn = document.getElementById('chatbot-send');
+  const input = document.getElementById('chatbot-input');
+  const msgs = document.getElementById('chatbot-messages');
+  const limitDiv = document.getElementById('chatbot-limit');
+  const upgradeDiv = document.getElementById('chatbot-upgrade');
+  let esPremium = false, limite = 0, usados = 0;
+
+  function scrollBottom(){ msgs.scrollTop = msgs.scrollHeight; }
+
+  function pintarEstado(){
+    if(!esPremium) {
+      limitDiv.textContent = `Uso diario: ${usados}/${limite}`;
+      if(usados >= limite){ upgradeDiv.style.display='block'; input.disabled = true; sendBtn.disabled = true; }
+    } else {
+      limitDiv.textContent = 'Usuario Premium - uso ilimitado';
+      upgradeDiv.style.display='none'; input.disabled = false; sendBtn.disabled = false;
+    }
+  }
+
+  function estado(){ fetch('/api/chatbot/estado').then(r=>r.json()).then(d=>{ if(!d.autenticado) return; esPremium = d.es_premium; limite = d.limite; usados = d.usados_hoy; pintarEstado(); }); }
+
+  function enviar(){
+    const texto = input.value.trim(); if(!texto) return; if(!esPremium && usados >= limite) { pintarEstado(); return; }
+    agregarMensaje(texto,'user'); input.value=''; usados++; pintarEstado();
+    fetch('/api/chatbot/mensaje',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({mensaje: texto})})
+      .then(r=>r.json())
+      .then(d=>{ if(d.error==='limite'){ usados = limite; pintarEstado(); agregarMensaje(d.mensaje,'bot'); return; } if(d.respuesta){ agregarMensaje(d.respuesta,'bot'); esPremium = d.es_premium; pintarEstado(); }})
+      .catch(()=> agregarMensaje('Ocurrió un error, intenta más tarde','bot'));
+  }
+
+  function agregarMensaje(texto, tipo){ const div = document.createElement('div'); div.className = 'chat-msg chat-' + (tipo==='user' ? 'user':'bot'); div.textContent = texto; msgs.appendChild(div); scrollBottom(); }
+
+  toggle.addEventListener('click', ()=>{ panel.style.display = panel.style.display==='flex' ? 'none':'flex'; if(panel.style.display==='flex'){ panel.style.flexDirection='column'; estado(); } });
+  closeBtn.addEventListener('click', ()=> panel.style.display='none');
+  sendBtn.addEventListener('click', enviar);
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ enviar(); } });
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) estado(); });
+})();
+</script>

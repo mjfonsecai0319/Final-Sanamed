@@ -4,6 +4,8 @@ from .auth.routes import auth_bp
 from .admin.routes import admin_bp
 from .user.routes import user_bp
 from .profesional.routes import profesional_bp
+from .chatbot import chatbot_bp
+from .payments import payments_bp
 
 def create_app():
     app = Flask(__name__)
@@ -25,6 +27,8 @@ def create_app():
     app.register_blueprint(user_bp, url_prefix='/user')
     app.register_blueprint(profesional_bp, url_prefix='/profesional')
     app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(chatbot_bp)  # rutas /api/chatbot/*
+    app.register_blueprint(payments_bp)  # rutas /payments/*
     
     
     return app

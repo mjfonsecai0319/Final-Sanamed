@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mejora a Premium - Sanamed</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='user/style2.css') }}">
+  <style>
+    .premium-wrapper { max-width: 900px; margin: 0 auto; padding: 20px 25px 60px; position:relative; }
+    .premium-header { text-align:center; margin-bottom:26px; }
+    .premium-header h1 { margin:0; font-size:40px; color:#274461; letter-spacing:1px; }
+    .premium-grid { display:grid; grid-template-columns: 1fr 1fr; gap:30px; }
+    @media (max-width:880px){ .premium-grid { grid-template-columns:1fr; } }
+    .plan-card { background:#ffffff; border:2px solid #4a6fa5; border-radius:14px; padding:28px 26px 32px; box-shadow:0 6px 18px rgba(0,0,0,.12); position:relative; display:flex; flex-direction:column; }
+    .plan-card h2 { margin:0 0 14px; font-size:24px; color:#274461; }
+    .plan-card ul { list-style:none; padding:0; margin:0 0 18px; }
+    .plan-card ul li { padding:6px 0 6px 28px; position:relative; font-size:15px; color:#2d475d; }
+    .plan-card ul li:before { content:'✔'; position:absolute; left:4px; top:5px; font-size:13px; color:#4a6fa5; }
+    .status { text-align:center; font-weight:600; margin:0 0 16px; }
+    .status.ok { color:#237a3c; }
+    .status.warn { color:#b85c00; }
+    .acciones { text-align:center; margin-top:auto; }
+    .btn-premium { background:#4a6fa5; color:#fff; border:none; border-radius:8px; padding:12px 22px; font-size:15px; cursor:pointer; font-weight:600; letter-spacing:.5px; box-shadow:0 4px 12px rgba(0,0,0,.18); transition:background .25s, transform .18s; }
+    .btn-premium:hover { background:#3d5d89; }
+    .btn-premium:active { transform:scale(.95); }
+    .regresar { text-align:center; margin-top:38px; }
+    .regresar a { color:#4a6fa5; font-weight:600; text-decoration:none; }
+    .regresar a:hover { text-decoration:underline; }
+    .badge-demo { position:absolute; top:-14px; right:-14px; background:#ffcf66; color:#5a3d00; padding:6px 12px; font-size:11px; font-weight:700; border-radius:30px; box-shadow:0 3px 10px rgba(0,0,0,.25); letter-spacing:.5px; }
+  .info-panel { background:#f5f8fb; border:2px solid #4a6fa5; border-radius:16px; padding:28px 28px 34px; color:#274461; box-shadow:0 6px 18px rgba(0,0,0,.10); display:flex; flex-direction:column; justify-content:space-between; }
+  .info-panel h3 { margin:0 0 14px; font-size:22px; letter-spacing:.5px; color:#274461; }
+  .info-panel p { margin:0 0 14px; line-height:1.45; font-size:15px; color:#2d475d; }
+  .mini-note { font-size:11px; opacity:.85; margin-top:auto; color:#4a6fa5; }
+  </style>
+</head>
+<body>
+  <h1 class="titulo-centrado" style="margin-top:18px;">SANAMED</h1>
+  <img src="{{ url_for('static', filename='auth/rectangle 6.png') }}" alt="Decoración superior" class="imagen-superior">
+  <img src="{{ url_for('static', filename='auth/saludmental1.png') }}" alt="Logo lateral" class="imagen-esquinai izquierda">
+
+  <div class="premium-wrapper">
+    <div class="premium-header">
+      <h1>Plan Premium</h1>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div style="max-width:600px;margin:14px auto 0;">
+          {% for category, message in messages %}
+            <div class="flash-message {{ category }}">{{ message }}</div>
+          {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+    </div>
+
+    <div class="premium-grid">
+      <div class="plan-card">
+        {% if es_premium %}
+          <p class="status ok">Actualmente eres Usuario Premium ✅</p>
+        {% else %}
+          <p class="status warn">Plan actual: Gratuito</p>
+          <span class="badge-demo">DEMO 30 DÍAS</span>
+        {% endif %}
+        <h2>Beneficios</h2>
+        <ul>
+          <li>Chatbot emocional ilimitado</li>
+          <li>Respuestas más contextuales</li>
+          <li>Soporte prioritario</li>
+          <li>Acceso temprano a nuevas funciones</li>
+          <li>Analíticas futuras de estado de ánimo</li>
+        </ul>
+        {% if not es_premium %}
+        <div class="acciones" style="display:flex; flex-direction:column; gap:10px;">
+          <a href="{{ url_for('payments.checkout', plan='mensual') }}" class="btn-premium" style="text-align:center; text-decoration:none;">Suscribirme Mensual</a>
+          <a href="{{ url_for('payments.checkout', plan='anual') }}" class="btn-premium" style="text-align:center; text-decoration:none; background:#274461;">Suscribirme Anual</a>
+          {% if not stripe_activo %}
+          <form method="POST" action="{{ url_for('user.activar_premium') }}" style="margin-top:4px;">
+            <button type="submit" class="btn-premium" style="background:#b85c00;">Activar Demo (sin pago)</button>
+          </form>
+          <p style="font-size:12px; color:#666;">Configura Stripe para ocultar el modo demo.</p>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="info-panel">
+        <h3>¿Por qué mejorar?</h3>
+        <p>El modo Premium te brinda acompañamiento continuo y potencia el asistente para darte respuestas más ricas y relevantes durante tu proceso de bienestar emocional.</p>
+        <p>Además, ayudas a que la plataforma siga creciendo y añadiendo herramientas terapéuticas, recursos multimedia y módulos de seguimiento personalizado.</p>
+        <p class="mini-note">* Esta es una activación demostrativa. En una versión futura se integrará una pasarela de pago real (Stripe/Mercado Pago).</p>
+      </div>
+    </div>
+
+    <div class="regresar">
+  <a href="{{ url_for('user.user_home') }}" style="color:#274461;">← Volver al inicio</a>
+    </div>
+  </div>
+
+  {% include 'partials/chatbot_widget.html' %}
+</body>
+</html>
